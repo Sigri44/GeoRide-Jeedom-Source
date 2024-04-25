@@ -137,6 +137,12 @@ class georide extends eqLogic {
             }
         }
     }
+  
+  	/* Obfusc API key */
+    public function obfuscApiKey($apiKey) {
+        $apiKey = substr($apiKey, 0, 5) . '****************' . substr($apiKey, -5);
+        return $apiKey;
+    }
 
     /* Get API Key from GeoRide */
     public function getAPIKey() {      
@@ -163,7 +169,7 @@ class georide extends eqLogic {
       
       	$newAuthToken = $jsonResult->authToken;
         // Debug
-        log::add(__CLASS__, 'debug', '[' . __FUNCTION__ . '] ' . '$newAuthToken:: '. print_r($newAuthToken, true));
+        log::add(__CLASS__, 'debug', '[' . __FUNCTION__ . '] ' . '$newAuthToken:: '. $this->obfuscApiKey(print_r($newAuthToken, true)));
 
       	// Set API key in configuration
       	config::save('APIToken', $newAuthToken, 'georide');
@@ -171,11 +177,20 @@ class georide extends eqLogic {
 
     /* Get informations of tracker called by refresh in cron and command */
     public function getInformations() {
+        $apiKey = config::byKey('APIToken', 'georide');
+      	
+      	// If API key is empty, we need to get it
+      	if ($apiKey == null) {
+        	log::add(__CLASS__, 'debug', '[' . __FUNCTION__ . '] ' . 'APIToken est vide, on va chercher un nouveau token !');
+          	$this->getAPIKey();
+          	return false;
+        }
+      	
         $trackerId = $this->getConfiguration("trackerId");
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, API_URL . '/user/trackers');
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, array('Authorization: Bearer ' . config::byKey('APIToken', 'georide')));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array('Authorization: Bearer ' . $apiKey));
         $result = curl_exec($ch);
         curl_close($ch);
 
@@ -444,7 +459,7 @@ class georide extends eqLogic {
         $online->setSubType('string');
         $online->save();
 
-	$isSecondGen = $this->getCmd(null, 'isSecondGen');
+	    $isSecondGen = $this->getCmd(null, 'isSecondGen');
         if (!is_object($isSecondGen)) {
             $isSecondGen = new georideCmd();
             $isSecondGen->setName(__('GeoRide 3', __FILE__));
@@ -457,7 +472,7 @@ class georide extends eqLogic {
         $isSecondGen->setSubType('numeric');
         $isSecondGen->save();
 
-	$externalBatteryVoltage = $this->getCmd(null, 'externalBatteryVoltage');
+	    $externalBatteryVoltage = $this->getCmd(null, 'externalBatteryVoltage');
         if (!is_object($externalBatteryVoltage)) {
             $externalBatteryVoltage = new georideCmd();
             $externalBatteryVoltage->setName(__('External battery voltage', __FILE__));
@@ -470,7 +485,7 @@ class georide extends eqLogic {
         $externalBatteryVoltage->setSubType('numeric');
         $externalBatteryVoltage->save();
 
-	$internalBatteryVoltage = $this->getCmd(null, 'internalBatteryVoltage');
+	    $internalBatteryVoltage = $this->getCmd(null, 'internalBatteryVoltage');
         if (!is_object($internalBatteryVoltage)) {
             $internalBatteryVoltage = new georideCmd();
             $internalBatteryVoltage->setName(__('Internal battery voltage', __FILE__));
